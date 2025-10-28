@@ -1,0 +1,12 @@
+{
+  "name": "aura-product-chatbot",
+  "version": "0.0.1",
+  "private": true,
+  "devDependencies": {
+    "esbuild": "^0.18.0"
+  },
+  "scripts": {
+    "build": "esbuild assets/js/aura-chatbot.js --bundle --minify --sourcemap --outfile=assets/dist/aura-chatbot.iife.js --format=iife --global-name=AuraChatbot",
+    "watch": "esbuild assets/js/aura-chatbot.js --bundle --sourcemap --outfile=assets/dist/aura-chatbot.iife.js --format=iife --global-name=AuraChatbot --watch"
+  }
+}
