@@ -1,0 +1,94 @@
+
+:root{
+  --ac-bg:#0f172a;
+  --ac-surface: rgba(255,255,255,0.04);
+  --ac-surface-2: rgba(255,255,255,0.08);
+  --ac-border: rgba(255,255,255,0.10);
+  --ac-border-2: rgba(255,255,255,0.18);
+  --ac-text:#ffffff;
+  --ac-text-muted: rgba(255,255,255,0.70);
+  --ac-accent: rgba(255,255,255,0.14);
+  --ac-accent-hover: rgba(255,255,255,0.20);
+  --ac-bubble-bot: rgba(255,255,255,0.08);
+  --ac-bubble-user: rgba(255,255,255,0.16);
+}
+
+#aura-chatbot, .aura-chatbot-wrap{ background: var(--ac-bg); color: var(--ac-text); }
+.ac-card{ background: var(--ac-surface); border:1px solid var(--ac-border); border-radius:14px; }
+.ac-card-strong{ background: var(--ac-surface-2); border:1px solid var(--ac-border-2); border-radius:14px; }
+.ac-btn{ background: var(--ac-accent); color: var(--ac-text); border:1px solid var(--ac-border); border-radius:10px; padding:.5rem .9rem; }
+.ac-btn:hover{ background: var(--ac-accent-hover); }
+.ac-chip{ border:1px solid var(--ac-border); border-radius:999px; padding:.25rem .5rem; color:var(--ac-text-muted); }
+.ac-input{ background: transparent; border:1px solid var(--ac-border); border-radius:10px; color:var(--ac-text); }
+.ac-input::placeholder{ color: var(--ac-text-muted); }
+
+/* Chat bubbles */
+.ac-bot{ background: var(--ac-bubble-bot); border:1px solid var(--ac-border); border-radius:14px; padding:.75rem .9rem; }
+.ac-user{ background: var(--ac-bubble-user); border:1px solid var(--ac-border); border-radius:14px; padding:.75rem .9rem; }
+
+/* Product grid cards */
+.product-card{ background: var(--ac-surface); border:1px solid var(--ac-border); border-radius:16px; }
+.product-card:hover{ border-color: var(--ac-border-2); }
+
+/* Size/Qty matrix */
+table.ac-matrix{ width:100%; border-collapse:separate; border-spacing: 0 12px; }
+table.ac-matrix thead th{ text-align:center; color: var(--ac-text-muted); font-weight:700; background: transparent !important; border:none !important; }
+table.ac-matrix tbody tr{ background: var(--ac-surface-2); }
+table.ac-matrix tbody td{ border:none; background: transparent; padding: 10px 12px; }
+table.ac-matrix tbody td:first-child{ color: var(--ac-text); font-weight:700; border-top-left-radius:12px; border-bottom-left-radius:12px; }
+table.ac-matrix tbody td:last-child{ border-top-right-radius:12px; border-bottom-right-radius:12px; }
+table.ac-matrix input.qty-cell{ width:72px; text-align:center; border:1px solid var(--ac-border); background:transparent; color:var(--ac-text); border-radius:10px; padding:.4rem; }
+
+/* Selects (native multi + custom single) */
+select.ac-select{ color-scheme: dark; background: var(--ac-surface-2) !important; color: var(--ac-text) !important; border:1px solid var(--ac-border) !important; border-radius:10px !important; padding:.6rem .9rem !important; }
+select.ac-select:focus{ background: var(--ac-surface) !important; border-color: var(--ac-border-2) !important; outline: none !important; }
+select.ac-select option, select.ac-select optgroup{ background: var(--ac-surface) !important; color: var(--ac-text) !important; }
+select.ac-select.ac-select-multi{ min-height: 8rem; }
+
+/* Custom themed single-select (Artwork) */
+.ac-select-custom{ position: relative; width:100%; }
+.ac-select-btn{
+  width:100%; background: var(--ac-surface-2); color: var(--ac-text);
+  border:1px solid var(--ac-border); border-radius:10px; padding:.65rem .9rem;
+  text-align:left; line-height:1.2; display:flex; align-items:center; justify-content:space-between;
+}
+.ac-select-btn:focus{ outline:none; border-color: var(--ac-border-2); box-shadow:0 0 0 3px rgba(255,255,255,.06); }
+.ac-select-btn .chev{ width:10px; height:10px; margin-left:.5rem; opacity:.8;
+  background: conic-gradient(from 135deg at 50% 50%, var(--ac-text) 0 25%, transparent 0 100%);
+  -webkit-mask: radial-gradient(9px at 50% 50%, #000 98%, transparent 100%);
+          mask: radial-gradient(9px at 50% 50%, #000 98%, transparent 100%);
+}
+.ac-options{ position:absolute; left:0; right:0; top:calc(100% + 6px); background: var(--ac-surface); border:1px solid var(--ac-border); border-radius:12px; padding:.25rem; z-index: 40; box-shadow: 0 8px 28px rgba(0,0,0,.35); }
+.ac-option{ padding:.6rem .8rem; border-radius:8px; cursor:pointer; color:var(--ac-text); }
+.ac-option:hover, .ac-option[aria-selected="true"]{ background: var(--ac-surface-2); }
+.ac-options.hidden{ display:none; }
+.ac-select-custom select{ position:absolute; left:-9999px; width:1px; height:1px; opacity:0; }
+
+:root{ --ac-menu-bg: #1f2937; }
+.ac-options{ background: var(--ac-menu-bg) !important; border: 1px solid var(--ac-border); border-radius: 12px; box-shadow: 0 8px 28px rgba(0,0,0,.35); z-index: 40; }
+.ac-option:hover, .ac-option[aria-selected="true"]{ background: var(--ac-surface-2); }
+select.ac-select option, select.ac-select optgroup{ background: var(--ac-menu-bg) !important; color: var(--ac-text) !important; }
+.ac-file-btn{ display:inline-flex; align-items:center; gap:.5rem; cursor:pointer; background: var(--ac-accent); color: var(--ac-text);
+  border:1px solid var(--ac-border); border-radius:10px; padding:.55rem .9rem; }
+.ac-file-btn:hover{ background: var(--ac-accent-hover); }
+.ac-file-btn input[type="file"]{ position:absolute; left:-9999px; width:1px; height:1px; opacity:0; }
+
+
+'.$css.'
+
+/* Unified image wrappers */
+#aura-chatbot-root .apc-img-wrap{position:relative;width:100%;overflow:hidden;border-radius:var(--apc-radius,16px);background:var(--ac-surface-2,#0F2230);}
+#aura-chatbot-root .apc-img{width:100%;height:auto;object-fit:contain;display:block;max-width:none;border-radius:inherit;}
+#aura-chatbot-root .apc-img-wrap.detail{border-radius:var(--apc-radius-lg,18px);}
+/* Grid spacing under image */
+#aura-chatbot-root .product-card .apc-img-wrap{margin-bottom:0.75rem;}
+/* Center titles */
+#aura-chatbot-root .product-card h3,
+#aura-chatbot-root .product-detail h3{ text-align:center; margin-left:auto; margin-right:auto; }
+/* Strong grid override */
+#aura-chatbot-root .product-card .apc-img,
+#aura-chatbot-root .apc-img-wrap .apc-img{ width:100%!important; height:auto!important; max-width:none!important; display:block; border-radius:inherit; }
+/* Color chips */
+#aura-chatbot-root .ac-color-chip{ background:var(--ac-surface-2,#0F2230); color:var(--ac-text,#fff); border:1px solid var(--ac-border,rgba(255,255,255,.15)); border-radius:999px; padding:.4rem 1rem; cursor:pointer; user-select:none; transition:all .2s ease;}
+#aura-chatbot-root .ac-color-chip:hover{ background:var(--ac-accent,rgba(255,255,255,.15));}
+#aura-chatbot-root .ac-color-chip.selected{ background:var(--ac-accent,rgba(255,255,255,.2)); border-color:var(--ac-border-2,rgba(255,255,255,.3)); box-shadow:0 0 0 1px var(--ac-border-2,rgba(255,255,255,.3));}
