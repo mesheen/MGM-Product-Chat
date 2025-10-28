@@ -1,34 +1,41 @@
 <?php
+declare(strict_types=1);
+
 namespace AuraModular;
+
 use AuraModular\Interfaces\ModuleInterface;
 
-class Plugin {
-    private $modules = array();
+/**
+ * Lightweight plugin manager that holds and registers modules.
+ */
+final class Plugin
+{
+    /** @var ModuleInterface[] */
+    private array $modules = [];
 
-    public function __construct() {
-        add_action('init', array($this, 'ensure_upload_dir'));
+    public function add_module(ModuleInterface $module): self
+    {
+        $this->modules[] = $module;
+        return $this;
     }
 
-    public function ensure_upload_dir() {
-        $u = wp_upload_dir();
-        if (!empty($u['basedir'])) {
-            $dir = trailingslashit($u['basedir']) . 'aura-artwork';
-            if (!file_exists($dir)) {
-                wp_mkdir_p($dir);
-            }
-            // Harden: block PHP execution
-            $ht = $dir . '/.htaccess';
-            if (!file_exists($ht)) {
-                file_put_contents($ht, "Options -Indexes\n<FilesMatch \"\\.(php|php\\.)\">\nDeny from all\n</FilesMatch>\n");
-            }
-            // Index file
-            $idx = $dir . '/index.html';
-            if (!file_exists($idx)) {
-                file_put_contents($idx, "");
+    public function register(): void
+    {
+        foreach ($this->modules as $module) {
+            // defensive: ensure register exists
+            if (method_exists($module, 'register')) {
+                $module->register();
             }
         }
     }
 
-    public function add_module(ModuleInterface $m) { $this->modules[] = $m; return $this; }
-    public function register() { foreach ($this->modules as $m) { $m->register(); } }
+    /**
+     * Return registered modules for diagnostics / testing.
+     *
+     * @return ModuleInterface[]
+     */
+    public function get_modules(): array
+    {
+        return $this->modules;
+    }
 }
