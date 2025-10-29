@@ -27,3 +27,25 @@
 
 ## [2.3.5] - 2025-10-26
 - Wizard Next fixed: reads selected **color chips** instead of legacy `<select>` (`selectedOptions` null error resolved).
+
+## [2.4.0] - 2025-10-29
+### Multi-File Upload Feature
+- **Upload Handler**: Enhanced `aura_upload_artwork_ajax_handler()` to support multiple file uploads while maintaining backward compatibility with single-file uploads.
+  - Accepts multiple files via `artwork[]` parameter
+  - Returns array of uploaded files with attachment IDs, URLs, filenames, and sizes
+  - Single file uploads continue to work with original response format
+- **Order Summary**: Updated `aura_send_order_ajax_handler()` to process multiple artwork files.
+  - Accepts array of attachment IDs via `artwork_attachment_ids[]` parameter
+  - Email body now lists all uploaded artwork files with filenames and URLs
+  - Attaches all artwork files to admin email (up to 10MB per file)
+  - Maintains backward compatibility with single `artwork_attachment_id` parameter
+- **WooCommerce Integration**: Enhanced `EmailAugment` module to support multiple artwork files.
+  - Order meta fields now display all uploaded artwork files
+  - Customer emails automatically attach all artwork files
+  - Reads from `_aura_artwork_attachment_ids` array (with fallback to single file)
+- **Chat Confirmation**: Added visual upload confirmation in chat interface.
+  - Listens for `artwork:uploaded` events on AuraBus
+  - Displays success message with file count or filename
+  - Green background styling for uploaded file confirmations
+- **Documentation**: Added comprehensive multi-file upload documentation in `docs/MULTI-FILE-UPLOAD.md`
+- **Build**: Added `.gitignore` to exclude node_modules and build artifacts from repository
