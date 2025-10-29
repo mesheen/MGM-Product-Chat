@@ -416,14 +416,32 @@ function aura_send_order_ajax_handler() {
     if (empty($_POST['order'])) { wp_send_json_error(['message' => 'No order data.']); }
     $order_items = json_decode(stripslashes($_POST['order']), true);
     if (json_last_error() !== JSON_ERROR_NONE || !is_array($order_items) || empty($order_items)) { wp_send_json_error(['message' => 'Invalid order data.']); }
-    $artwork_filename = isset($_POST['artwork_filename']) ? sanitize_file_name($_POST['artwork_filename']) : '';
-$artwork_url = isset($_POST['artwork_url']) ? esc_url_raw($_POST['artwork_url']) : '';
-$artwork_attachment_id = isset($_POST['artwork_attachment_id']) ? intval($_POST['artwork_attachment_id']) : 0;
-$artwork_size = isset($_POST['artwork_size']) ? intval($_POST['artwork_size']) : 0;
+    
+    // Support both single and multiple artwork files
+    $artwork_attachment_ids = array();
+    
+    // Check for single artwork (backward compatibility)
+    if (isset($_POST['artwork_attachment_id']) && intval($_POST['artwork_attachment_id']) > 0) {
+        $artwork_attachment_ids[] = intval($_POST['artwork_attachment_id']);
+    }
+    
+    // Check for multiple artwork files
+    if (isset($_POST['artwork_attachment_ids']) && is_array($_POST['artwork_attachment_ids'])) {
+        foreach ($_POST['artwork_attachment_ids'] as $id) {
+            $aid = intval($id);
+            if ($aid > 0) {
+                $artwork_attachment_ids[] = $aid;
+            }
+        }
+    }
+    
+    // Remove duplicates
+    $artwork_attachment_ids = array_unique($artwork_attachment_ids);
 
-$admin_email = get_option('admin_email');
+    $admin_email = get_option('admin_email');
     $subject = 'New Custom Garment Order from Website Chatbot';
     $message = "A new custom garment order has been submitted:\n\n============================================\n\n";
+    
     foreach ($order_items as $index => $item) {
         $message .= "--- ITEM " . ($index + 1) . " ---\n";
         $message .= "Product: " . sanitize_text_field($item['product'] ?? 'N/A') . "\n";
@@ -433,12 +451,42 @@ $admin_email = get_option('admin_email');
         $message .= "Artwork: " . sanitize_text_field($item['artwork'] ?? 'N/A') . "\n";
         $message .= "Print Placement: " . sanitize_text_field($item['placement'] ?? 'N/A') . "\n\n";
     }
+    
+    // Add artwork file information to email body
+    if (!empty($artwork_attachment_ids)) {
+        $message .= "ARTWORK FILES (" . count($artwork_attachment_ids) . "):\n";
+        foreach ($artwork_attachment_ids as $aid) {
+            $filename = basename(get_attached_file($aid));
+            $url = wp_get_attachment_url($aid);
+            $message .= "  - " . $filename . "\n";
+            if ($url) {
+                $message .= "    URL: " . $url . "\n";
+            }
+        }
+        $message .= "\n";
+    }
+    
     $message .= "============================================\n\nPlease follow up with the client to finalize details and provide a quote.\n";
     $headers = ['Content-Type: text/plain; charset=UTF-8'];
+    
+    // Attach artwork files to email
     $attachments = array();
-$max_mb = 10; $max_bytes = $max_mb*1024*1024;
-if ($artwork_attachment_id) { $path = get_attached_file($artwork_attachment_id); if ($path && file_exists($path) && filesize($path) <= $max_bytes) { $attachments[] = $path; } }
-if (wp_mail($admin_email, $subject, $message, $headers, $attachments)) { wp_send_json_success(['message' => 'Email sent successfully.']); }
+    $max_mb = 10; 
+    $max_bytes = $max_mb * 1024 * 1024;
+    
+    foreach ($artwork_attachment_ids as $aid) {
+        $path = get_attached_file($aid);
+        if ($path && file_exists($path) && filesize($path) <= $max_bytes) {
+            $attachments[] = $path;
+        }
+    }
+    
+    if (wp_mail($admin_email, $subject, $message, $headers, $attachments)) { 
+        wp_send_json_success([
+            'message' => 'Email sent successfully.',
+            'artwork_count' => count($artwork_attachment_ids)
+        ]); 
+    }
     wp_send_json_error(['message' => 'Failed to send email.']);
 }
 // MODULAR: removed hook -> add_action('wp_ajax_aura_send_order', 'aura_send_order_ajax_handler');
@@ -528,10 +576,6 @@ function aura_upload_artwork_ajax_handler(){
     if ( empty($_FILES['artwork']) || !isset($_FILES['artwork']['name']) ){
         wp_send_json_error(array('message'=>'No file uploaded.'), 400);
     }
-    $file = $_FILES['artwork'];
-    if ( $file['error'] !== UPLOAD_ERR_OK ){
-        wp_send_json_error(array('message'=>'Upload error code '.$file['error']), 400);
-    }
 
     // Allowed mimes
     $allowed_mimes = array(
@@ -546,49 +590,175 @@ function aura_upload_artwork_ajax_handler(){
         'mimes'     => $allowed_mimes
     );
 
-    // Handle upload via WP API (sideload into uploads)
-    // Force uploads into /uploads/aura-artwork (no Y/M folders)
-$__aura_rm = add_filter('upload_dir', function($dirs){
-    $sub = 'aura-artwork';
-    $dirs['subdir'] = '/' . $sub;
-    $dirs['path']   = $dirs['basedir'] . $dirs['subdir'];
-    $dirs['url']    = $dirs['baseurl'] . $dirs['subdir'];
-    return $dirs;
-});
+    // Handle both single file and multiple file uploads
+    $files = $_FILES['artwork'];
+    $uploaded_files = array();
 
-$result = wp_handle_upload($file, $overrides);
-// Remove temporary upload_dir filter
-remove_filter('upload_dir', '__return_false'); // noop cleanup in case of earlier set
-if (isset($__aura_rm)) { remove_filter('upload_dir', $__aura_rm); }
+    // Check if multiple files were uploaded
+    $is_multi = is_array($files['name']);
 
-    if ( isset($result['error']) ){
-        wp_send_json_error(array('message'=>$result['error']), 400);
+    if (!$is_multi) {
+        // Single file upload (backward compatibility)
+        if ( $files['error'] !== UPLOAD_ERR_OK ){
+            wp_send_json_error(array('message'=>'Upload error code '.$files['error']), 400);
+        }
+
+        // Force uploads into /uploads/aura-artwork (no Y/M folders)
+        $__aura_rm = add_filter('upload_dir', function($dirs){
+            $sub = 'aura-artwork';
+            $dirs['subdir'] = '/' . $sub;
+            $dirs['path']   = $dirs['basedir'] . $dirs['subdir'];
+            $dirs['url']    = $dirs['baseurl'] . $dirs['subdir'];
+            return $dirs;
+        });
+
+        $result = wp_handle_upload($files, $overrides);
+        remove_filter('upload_dir', '__return_false');
+        if (isset($__aura_rm)) { remove_filter('upload_dir', $__aura_rm); }
+
+        if ( isset($result['error']) ){
+            wp_send_json_error(array('message'=>$result['error']), 400);
+        }
+
+        $file_path = $result['file'];
+        $file_url  = $result['url'];
+        $mime      = $result['type'];
+
+        // Create attachment
+        $attachment = array(
+            'post_title'     => sanitize_file_name( pathinfo($file_path, PATHINFO_FILENAME) ),
+            'post_mime_type' => $mime,
+            'post_status'    => 'inherit'
+        );
+        $attach_id = wp_insert_attachment($attachment, $file_path);
+        require_once ABSPATH . 'wp-admin/includes/image.php';
+        $meta = wp_generate_attachment_metadata($attach_id, $file_path);
+        wp_update_attachment_metadata($attach_id, $meta);
+
+        wp_send_json_success(array(
+            'attachment_id' => $attach_id,
+            'url'           => $file_url,
+            'filename'      => basename($file_path),
+            'size'          => (int) filesize($file_path)
+        ), 200);
+    } else {
+        // Multiple file upload
+        $file_count = count($files['name']);
+
+        for ($i = 0; $i < $file_count; $i++) {
+            if ($files['error'][$i] !== UPLOAD_ERR_OK) {
+                continue; // Skip files with errors
+            }
+
+            // Reconstruct file array for wp_handle_upload
+            $file = array(
+                'name'     => $files['name'][$i],
+                'type'     => $files['type'][$i],
+                'tmp_name' => $files['tmp_name'][$i],
+                'error'    => $files['error'][$i],
+                'size'     => $files['size'][$i]
+            );
+
+            // Force uploads into /uploads/aura-artwork (no Y/M folders)
+            $__aura_rm = add_filter('upload_dir', function($dirs){
+                $sub = 'aura-artwork';
+                $dirs['subdir'] = '/' . $sub;
+                $dirs['path']   = $dirs['basedir'] . $dirs['subdir'];
+                $dirs['url']    = $dirs['baseurl'] . $dirs['subdir'];
+                return $dirs;
+            });
+
+            $result = wp_handle_upload($file, $overrides);
+            remove_filter('upload_dir', '__return_false');
+            if (isset($__aura_rm)) { remove_filter('upload_dir', $__aura_rm); }
+
+            if ( isset($result['error']) ){
+                continue; // Skip files that fail upload
+            }
+
+            $file_path = $result['file'];
+            $file_url  = $result['url'];
+            $mime      = $result['type'];
+
+            // Create attachment
+            $attachment = array(
+                'post_title'     => sanitize_file_name( pathinfo($file_path, PATHINFO_FILENAME) ),
+                'post_mime_type' => $mime,
+                'post_status'    => 'inherit'
+            );
+            $attach_id = wp_insert_attachment($attachment, $file_path);
+            require_once ABSPATH . 'wp-admin/includes/image.php';
+            $meta = wp_generate_attachment_metadata($attach_id, $file_path);
+            wp_update_attachment_metadata($attach_id, $meta);
+
+            $uploaded_files[] = array(
+                'attachment_id' => $attach_id,
+                'url'           => $file_url,
+                'filename'      => basename($file_path),
+                'size'          => (int) filesize($file_path)
+            );
+        }
+
+        if (empty($uploaded_files)) {
+            wp_send_json_error(array('message'=>'No files were successfully uploaded.'), 400);
+        }
+
+        wp_send_json_success(array(
+            'files' => $uploaded_files,
+            'count' => count($uploaded_files)
+        ), 200);
     }
-
-    $file_path = $result['file'];
-    $file_url  = $result['url'];
-    $mime      = $result['type'];
-
-    // Create attachment
-    $attachment = array(
-        'post_title'     => sanitize_file_name( pathinfo($file_path, PATHINFO_FILENAME) ),
-        'post_mime_type' => $mime,
-        'post_status'    => 'inherit'
-    );
-    $attach_id = wp_insert_attachment($attachment, $file_path);
-    require_once ABSPATH . 'wp-admin/includes/image.php';
-    $meta = wp_generate_attachment_metadata($attach_id, $file_path);
-    wp_update_attachment_metadata($attach_id, $meta);
-
-    wp_send_json_success(array(
-        'attachment_id' => $attach_id,
-        'url'           => $file_url,
-        'filename'      => basename($file_path),
-        'size'          => (int) filesize($file_path)
-    ), 200);
 }}
 
-
+// Add inline script to handle upload completion events and display confirmation in chat
+add_action('wp_enqueue_scripts', function(){
+    if (!wp_script_is('aura-chatbot', 'enqueued') && !wp_script_is('aura-chatbot', 'registered')) {
+        return;
+    }
+    
+    $script = "
+    (function() {
+        // Wait for AuraBus to be available
+        function waitForAuraBus(callback) {
+            if (window.AuraBus) {
+                callback();
+            } else {
+                setTimeout(function() { waitForAuraBus(callback); }, 100);
+            }
+        }
+        
+        waitForAuraBus(function() {
+            // Listen for upload completion events
+            window.AuraBus.on('artwork:uploaded', function(data) {
+                var message = '';
+                if (data.count && data.count > 1) {
+                    message = '✓ ' + data.count + ' files uploaded successfully!';
+                } else if (data.filename) {
+                    message = '✓ File uploaded: ' + data.filename;
+                } else {
+                    message = '✓ File uploaded successfully!';
+                }
+                
+                // Try to find the messages container and add the confirmation
+                var messagesContainer = document.getElementById('messages');
+                if (messagesContainer) {
+                    var confirmMsg = document.createElement('div');
+                    confirmMsg.className = 'message bot-message';
+                    confirmMsg.style.cssText = 'background: #10b981; color: white; padding: 0.75rem 1rem; border-radius: 0.5rem; margin: 0.5rem 0; font-size: 0.875rem;';
+                    confirmMsg.textContent = message;
+                    messagesContainer.appendChild(confirmMsg);
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                }
+                
+                // Also log to console for debugging
+                console.log('[Aura Upload] ' + message, data);
+            });
+        });
+    })();
+    ";
+    
+    wp_add_inline_script('aura-chatbot', $script, 'after');
+}, 25);
 
 
 

@@ -1,0 +1,12 @@
+# Dependencies
+node_modules/
+
+# Build artifacts
+assets/dist/
+
+# Lock files (optional, but good to track for consistency)
+# package-lock.json
+
+# WordPress
+wp-config.php
+wp-content/uploads/
